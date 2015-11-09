@@ -112,6 +112,8 @@ An inversion can be performed as follows:
    `data(testspec)`.
 
 ```{r}
+library(PEcAnRTM)
+wl <- 400:2500
 data(testspec)
 observed <- testspec_ACRU[,1:3]
 matplot(wl, observed, 
