@@ -49,7 +49,7 @@ convert.samples.MAAT <- function(trait.samples) {
   if ("atref.rd" %in% names(trait.samples)) {
     ## Calculate dark_resp_factor - rd as a proportion of Vcmax, Williams & Flannagan 1998 ~ 0.1
     ## (unitless)
-    trait.samples[["rd_prop_vcmax"]] <- trait.samples[["atref.rd"]] / trait.samples[["atref.vcmax"]]
+    trait.samples[["b_rdv_25"]] <- trait.samples[["atref.rd"]] / trait.samples[["atref.vcmax"]]
   }
   if ("Ha.vcmax" %in% names(trait.samples)) {
     ## Convert from kJ mol-1 to J mol-1
@@ -100,7 +100,17 @@ write.config.MAAT <- function(defaults = NULL, trait.values, settings, run.id) {
             file.path(settings$model$binary, "src")))
   
   ### Parse config options to XML
-  xml <- listToXml(settings$model$config, "default")
+  #settings <- read.settings('/data/sserbin/Modeling/maat/pecan.xml')
+  if (!is.null(settings$model$config$mod_mimic)) {
+    logger.info(paste0("Running with model mimic: ",settings$model$config$mod_mimic))
+    mod_mimic <- as.character(settings$model$config$mod_mimic)
+    settings$model$config$mod_mimic <- NULL
+    xml <- listToXml(settings$model$config, "default")
+  } else {
+    mod_mimic <- NULL
+    xml <- listToXml(settings$model$config, "default")
+  }
+  #xml <- listToXml(settings$model$config, "default")
   
   ### Run rename and conversion function on PEcAn trait values
   traits <- convert.samples.MAAT(trait.samples = trait.values[[settings$pfts$pft$name]])
@@ -118,8 +128,6 @@ write.config.MAAT <- function(defaults = NULL, trait.values, settings, run.id) {
           file = file.path(settings$rundir, run.id, "leaf_user_static.xml"), 
           indent = TRUE, 
           prefix = PREFIX_XML)
-  
-  ### Write out new XML  _ NEED TO FIX THIS BIT. NEED TO CONVERT WHOLE LIST TO XML
   #saveXML(xml, file = file.path(settings$rundir, run.id, "leaf_default.xml"), indent=TRUE, prefix = PREFIX_XML)
   if (is.null(settings$run$inputs$met)) {
     logger.info("-- No met selected. Running without a met driver --")
@@ -134,7 +142,6 @@ write.config.MAAT <- function(defaults = NULL, trait.values, settings, run.id) {
                     settings$run$end.date,"') ",
                     '" | R --vanilla')
     # Run with met drivers 
-    # !!Need to update for running with met, needs to paste mdir (met dir) to command !!
   } else if (!is.null(settings$run$inputs$met)) {
     met.dir <- dirname(settings$run$inputs$met$path)
     met.file <- basename(settings$run$inputs$met$path)
@@ -144,7 +151,9 @@ write.config.MAAT <- function(defaults = NULL, trait.values, settings, run.id) {
               recursive = FALSE, 
               copy.mode = TRUE, 
               copy.date = TRUE)
-    jobsh <- paste0("#!/bin/bash\n","Rscript ",rundir,"/run_MAAT.R"," ",
+#    jobsh <- paste0("#!/bin/bash\n","Rscript ",rundir,"/run_MAAT.R"," ",
+    jobsh <- paste0("#!/bin/bash\n","Rscript ",rundir,"/run_MAAT.R"," ","\"xml<-T","\""," ","\"uq<-F","\""," ",
+                    "\"factorial<-F","\""," ","\"mod_mimic<-",mod_mimic,"\""," ",
                     "\"odir <- ","'",outdir,"'","\""," ","\"mdir <- ","'",met.dir,"'",
                     "\""," ","\"metdata <- ","'",met.file,"'","\""," > ",rundir,
                     "/logfile.txt","\n",'echo "',

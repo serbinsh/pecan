@@ -29,13 +29,14 @@
 ##' @export
 ##' @author Shawn Serbin, Anthony Walker
 ##' @importFrom PEcAn.utils misc.convert mstmipvar
-##' @importFrom ncdf4 ncdim_def
+##' @importFrom ncdf4 ncdim_def nc_create ncvar_put nc_close
 model2netcdf.MAAT <- function(outdir, sitelat = -999, sitelon = -999, start_date = NULL, end_date = NULL) {
 
   ## TODO !!UPDATE SO IT WILL WORK WITH NO MET AND WITH MET DRIVER!!
 
   ### Read in model output in SIPNET format
-  maat.out.file <- file.path(outdir, "out.csv")
+  #maat.out.file <- file.path(outdir, "out.csv")
+  maat.out.file <- file.path(outdir, list.files(outdir,'*.csv$')) # updated to handle mod_mimic runs
   maat.output <- read.csv(maat.out.file, header = TRUE)
   maat.output.dims <- dim(maat.output)
   
@@ -111,15 +112,15 @@ model2netcdf.MAAT <- function(outdir, sitelat = -999, sitelon = -999, start_date
     nc_var[[4]]  <- mstmipvar("stomatal_conductance", lat, lon, t, NA)
     
     ### Output netCDF data
-    nc <- ncdf4::nc_create(file.path(outdir, paste(y, "nc", sep = ".")), nc_var)
+    nc <- nc_create(file.path(outdir, paste(y, "nc", sep = ".")), nc_var)
     varfile <- file(file.path(outdir, paste(y, "nc", "var", sep = ".")), "w")
     for (i in seq_along(nc_var)) {
-      print(i)  # just on for debugging
-      ncdf4::ncvar_put(nc, nc_var[[i]], output[[i]])
+      #print(i)  # just on for debugging
+      ncvar_put(nc, nc_var[[i]], output[[i]])
       cat(paste(nc_var[[i]]$name, nc_var[[i]]$longname), file = varfile, sep = "\n")
     }  ## netCDF loop
     close(varfile)
-    ncdf4::nc_close(nc)
+    nc_close(nc)
     
   }  ## Year loop
 } # model2netcdf.MAAT
