@@ -131,7 +131,8 @@ write.config.MAAT <- function(defaults = NULL, trait.values, settings, run.id) {
   #saveXML(xml, file = file.path(settings$rundir, run.id, "leaf_default.xml"), indent=TRUE, prefix = PREFIX_XML)
   if (is.null(settings$run$inputs$met)) {
     logger.info("-- No met selected. Running without a met driver --")
-    jobsh <- paste0("#!/bin/bash\n","Rscript ",rundir,"/run_MAAT.R"," ",
+    jobsh <- paste0("#!/bin/bash\n","Rscript ",rundir,"/run_MAAT.R"," "," ","\"xml<-T","\""," ","\"uq<-F","\""," ",
+                    "\"factorial<-F","\""," ","\"mod_mimic<-",mod_mimic,"\""," ",
                     "\"odir <- ","'",outdir,"'","\""," > ",rundir,
                     "/logfile.txt","\n",'echo "',
                     ' library(PEcAn.MAAT); model2netcdf.MAAT(',

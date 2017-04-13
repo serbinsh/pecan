@@ -71,7 +71,8 @@ model2netcdf.MAAT <- function(outdir, sitelat = -999, sitelon = -999, start_date
     output[[1]] <- out.year  # Simulation year
     output[[2]] <- sub.maat.doy + day.steps  # Fractional day
     output[[3]] <- (sub.maat.output$A)  # assimilation in umols C/m2/s
-    output[[4]] <- (sub.maat.output$gs)  # stomatal conductance in mol H2O m-2 s-1
+    output[[4]] <- (sub.maat.output$respiration)  # respiration in umols C/m2/s
+    output[[5]] <- (sub.maat.output$gs)  # stomatal conductance in mol H2O m-2 s-1
     ## !!TODO: ADD MORE MAAT OUTPUTS HERE!! ##
 
     #******************** Declare netCDF variables ********************#
@@ -99,8 +100,12 @@ model2netcdf.MAAT <- function(outdir, sitelat = -999, sitelon = -999, start_date
                           misc.convert(output[[3]],
                                               "umol C m-2 s-1",
                                               "kg C m-2 s-1"))  # convert A/GPP to kgC/m2/s
-    output[[4]] <- ifelse(output[[4]] == "Inf", -999, 
-                          misc.convert(output[[4]], 
+    output[[4]] <- ifelse(output[[4]] == -999, -999, 
+                          misc.convert(output[[4]],
+                                       "umol C m-2 s-1",
+                                       "kg C m-2 s-1"))  # convert leaf resp to kgC/m2/s
+    output[[5]] <- ifelse(output[[5]] == "Inf", -999, 
+                          misc.convert(output[[5]], 
                                               "mol H2O m-2 s-1",
                                               "kg H2O m-2 s-1"))  # stomatal_conductance in kg H2O m2 s1
     
@@ -109,7 +114,8 @@ model2netcdf.MAAT <- function(outdir, sitelat = -999, sitelon = -999, start_date
     nc_var[[1]]  <- mstmipvar("Year", lat, lon, t, NA)
     nc_var[[2]]  <- mstmipvar("FracJulianDay", lat, lon, t, NA)
     nc_var[[3]]  <- mstmipvar("GPP", lat, lon, t, NA)
-    nc_var[[4]]  <- mstmipvar("stomatal_conductance", lat, lon, t, NA)
+    nc_var[[4]]  <- mstmipvar("leaf_respiration", lat, lon, t, NA)
+    nc_var[[5]]  <- mstmipvar("stomatal_conductance", lat, lon, t, NA)
     
     ### Output netCDF data
     nc <- nc_create(file.path(outdir, paste(y, "nc", sep = ".")), nc_var)
