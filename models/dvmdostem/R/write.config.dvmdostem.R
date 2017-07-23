@@ -67,12 +67,21 @@ write.config.dvmdostem <- function(defaults = NULL, trait.values, settings, run.
    local.rundir <- file.path(settings$rundir, run.id) ## this is on local machine for staging
    rundir     <- file.path(settings$host$rundir, run.id)  ## this is on remote machine for execution
    outdir <- file.path(settings$host$outdir, run.id)
+   binary <- settings$model$binary
    
    npft <- length(trait.values)
    PEcAn.utils::logger.debug(npft)
    PEcAn.utils::logger.debug(dim(trait.values))
    PEcAn.utils::logger.debug(names(trait.values))
-
+   PEcAn.utils::logger.debug(trait.values[[1]])
+   trait_samples <- as.data.frame(trait.values)
+   PEcAn.utils::logger.debug(trait_samples[["SLA"]])
+   var <- "SLA"
+   PEcAn.utils::logger.debug(trait_samples[[var]])
+   PEcAn.utils::logger.debug(colnames(trait_samples))
+   
+   # Copy output_spec.csv from inst folder into the rundir (see variable instantiated above)
+   
    # 1) Read in a parameter data block from dvmdostem
    # system2(command, args = character(),
    #         stdout = "", stderr = "", stdin = "", input = NULL,
@@ -80,7 +89,7 @@ write.config.dvmdostem <- function(defaults = NULL, trait.values, settings, run.
    #         minimized = FALSE, invisible = TRUE, timeout = 0)
    # Not sure how to check exit code??
    # Not sure what we need to do with stderr...
-   dvmpath <- '/data/software/dvm-dos-tem'
+   dvmpath <- '/home/carya/dvm-dos-tem'
    params <- paste(dvmpath,"parameters",'cmt_dimvegetation.txt',sep="/")
    json_file <- '/tmp/junk.json'
    community_type <- '04'
@@ -94,59 +103,100 @@ write.config.dvmdostem <- function(defaults = NULL, trait.values, settings, run.
    json_data <- fromJSON(paste(readLines(json_file), collapse=""))
    # Overwrite the data
    #var <- "sla"
-   #json_data$pft1[[var]]
+   #json_data$pft1[[var]] 
    
+   idx <- 0
    for (i in names(json_data)){
+     idx <- idx+1
      if (grepl("pft",i)){
        pft_name <- json_data[[i]]$name
-       print(pft_name)
-       short_bety_pft <- strip(...settings$pfts$pft$name)
-       if (pft_name==short_bety_pft){
-         print(i)
-         parameter <- "sla"
-         json_data[[i]][[parameter]] = 
-       }
+       print(paste(pft_name, idx))
+       
+       relevant_list = trait.values
+       #short_bety_pft <- strip(...settings$pfts$pft$name)
+       # if (pft_name==short_bety_pft){
+       #   print(i)
+       #   parameter <- "sla"
+       #   #json_data[[i]][[parameter]] = 
+       # }
      } else {
        "Not the droid we are looking for"
      }
    }
+   print(str(trait.values))
+   temp_traits <- trait.values
    
-
+   # TODO:
+   # finish with parameter update process
+   # dynamically cipy parameters to right place
+   # dynamically copy the output_spec to the right place
+   # figure out how to handle the met. 
+   #  -> step one is symlink from raw data locations (Model install folder) into pecan run folder
+   #     could do with withing job.sh
    
-   json_data$pft9$sla = 
-   # Write it back out to disk (overwriting ok??)
-   exportJson <- toJSON(json_data)
-   write(exportJson, "some/tmp/file.json")
-
-   # 3) Write parameter file back out to dvmdostem parameter file
-   # Need to 
-   system2("dvmdostem/scripts/param_util.py" args=("--fmt-block-from-json some/tmp/file.json ?<REF FILE>?", stdout="<some parameter file for dvmdostem to runwith ...>", wait=TRUE,)
- 
-
-
-   ### create launch script (which will create symlink) - needs to be created
-   # if (!is.null(settings$model$jobtemplate) && file.exists(settings$model$jobtemplate)) {
-   #   jobsh <- readLines(con=settings$model$jobtemplate, n=-1)
-   # } else {
-   #   jobsh <- readLines(con=system.file("template.job", package = "PEcAn.FATES"), n=-1)
-   # }
-
-   ### create host specific setttings
-   # hostsetup <- ""
-   # if (!is.null(settings$model$prerun)) {
-   #   hostsetup <- paste(hostsetup, sep="\n", paste(settings$model$prerun, collapse="\n"))
-   # }
-   # if (!is.null(settings$host$prerun)) {
-   #   hostsetup <- paste(hostsetup, sep="\n", paste(settings$host$prerun, collapse="\n"))
-   # }
+   
+   # json_data$pft9$sla = 
+   # # Write it back out to disk (overwriting ok??)
+   # exportJson <- toJSON(json_data)
+   # write(exportJson, "some/tmp/file.json")
    # 
-   # hostteardown <- ""
-   # if (!is.null(settings$model$postrun)) {
-   #   hostteardown <- paste(hostteardown, sep="\n", paste(settings$model$postrun, collapse="\n"))
-   # }
-   # if (!is.null(settings$host$postrun)) {
-   #   hostteardown <- paste(hostteardown, sep="\n", paste(settings$host$postrun, collapse="\n"))
-   # }
+   # # 3) Write parameter file back out to dvmdostem parameter file
+   # # Need to 
+   # system2("dvmdostem/scripts/param_util.py", args=("--fmt-block-from-json some/tmp/file.json ?<REF FILE>?", stdout="<some parameter file for dvmdostem to runwith ...>", wait=TRUE,)
+   # 
+
+   # Handle the config file (gsub template params) write out the final (substitued) config file to rundir (see variable from above)
+
+   if (!is.null(settings$model$configtemplate) && file.exists(settings$model$configtemplate)) {
+     config_template <- readLines(con=settings$model$config_template, n=-1)
+   } else {
+     config_template <- readLines(con=system.file("config.js.template", package = "PEcAn.dvmdostem"), n=-1)
+   }
+   
+   config_template <- gsub("@INPUT_DATA_DIR@", file.path(dirname(binary), "DATA/SewardPen_10x10"), config_template)
+   config_template <- gsub("@MODEL_OUTPUT_DIR@", outdir, config_template)
+   
+   if (! file.exists(file.path(settings$rundir, run.id,"config"))) dir.create(file.path(settings$rundir, run.id,"config"), recursive = TRUE)
+
+   writeLines(config_template, con=file.path(settings$rundir, run.id,"config/config.js"))
+   
+   
+   ### create launch script (which will create symlink) - needs to be created
+   if (!is.null(settings$model$jobtemplate) && file.exists(settings$model$jobtemplate)) {
+     jobsh <- readLines(con=settings$model$jobtemplate, n=-1)
+   } else {
+     jobsh <- readLines(con=system.file("job.sh.template", package = "PEcAn.dvmdostem"), n=-1)
+   }
+
+   ### create host specific setttings - stubbed for now, nothing to do yet, ends up as empty 
+   ### string that is put into the job.sh file
+   hostsetup <- ""
+   if (!is.null(settings$model$prerun)) {
+     hostsetup <- paste(hostsetup, sep="\n", paste(settings$model$prerun, collapse="\n"))
+   }
+   if (!is.null(settings$host$prerun)) {
+     hostsetup <- paste(hostsetup, sep="\n", paste(settings$host$prerun, collapse="\n"))
+   }
+
+   hostteardown <- ""
+   if (!is.null(settings$model$postrun)) {
+     hostteardown <- paste(hostteardown, sep="\n", paste(settings$model$postrun, collapse="\n"))
+   }
+   if (!is.null(settings$host$postrun)) {
+     hostteardown <- paste(hostteardown, sep="\n", paste(settings$host$postrun, collapse="\n"))
+   }
+   
+   jobsh <- gsub("@HOST_SETUP@", hostsetup, jobsh)
+   jobsh <- gsub("@HOST_TEARDOWN@", hostteardown, jobsh)
+   
+   jobsh <- gsub("@RUNDIR@", rundir, jobsh)
+   jobsh <- gsub("@OUTDIR@", outdir, jobsh)
+   jobsh <- gsub("@BINARY@", binary, jobsh)
+  
+   writeLines(jobsh, con=file.path(settings$rundir, run.id,"job.sh"))
+   Sys.chmod(file.path(settings$rundir, run.id,"job.sh"))
+   
+  
 
 
 
