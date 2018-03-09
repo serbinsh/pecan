@@ -253,6 +253,10 @@ write.config.FATES <- function(defaults, trait.values, settings, run.id){
      leafC <- NA
      if(is.na(leafC)) leafC <- 0.48
      
+     # determine photo pathway
+     photo_flag <- ncdf4::ncvar_get(fates.param.nc,varid="fates_c3psn", start = ipft, count = 1)
+     PEcAn.logger::logger.debug(paste0("Photosynthesis pathway flag value: ", photo_flag))
+     
      ## Loop over VARIABLES
      for (v in seq_along(pft)) {
        var <- names(pft)[v]
@@ -270,6 +274,31 @@ write.config.FATES <- function(defaults, trait.values, settings, run.id){
          ncdf4::ncvar_put(nc=fates.param.nc, varid='fates_BB_slope', start = ipft, count = 1,
                           vals=pft[v])
        }
+       
+       # Ball-Berry intercept - c3.  We need to figure out how to set either C3 or C4 values? Based on the PFT?
+       # TODO: allow setting this for C3 and/or C4 PFTs
+       # right now, each are just one dimension, will need to revist this if this changes.
+       if(var == "cuticular_cond"){
+         if (photo_flag==0) {
+           PEcAn.logger::logger.debug("** Setting C4 cuticular conductance value")
+           ncdf4::ncvar_put(nc=fates.param.nc, varid='fates_bbopt_c4', start = 1, count = 1,
+                            vals=pft[v])
+         } else if (photo_flag==1) {
+           PEcAn.logger::logger.debug("** Setting C3 cuticular conductance value")
+           ncdf4::ncvar_put(nc=fates.param.nc, varid='fates_bbopt_c3', start = 1, count = 1,
+                            vals=pft[v])
+         } else {
+           PEcAn.logger::logger.warn(" ** FATES photosynthesis pathway flag not set. cuticular conductance not set **")
+         }
+       }
+       
+       ## missing from params.nc 
+       #       if(var == "cuticular_cond"){
+       #         gH2O_per_mol <- 18.01528
+       #         ncvar_put(nc=param.nc, varid='gsmin', start = ipft, count = 1,
+       #                   vals=pft[v]*gH2O_per_mol*1e-12)   ### umol H2O m-2 s-1 ->  [m s-1]
+       #       }
+       
        
        # T response params - modified Arrhenius params for Vcmax, Jmax, and TPU
        # -- NOT YET IMPLEMENTED IN BETYdb. FATES params:
@@ -297,12 +326,6 @@ write.config.FATES <- function(defaults, trait.values, settings, run.id){
          ncdf4::ncvar_put(nc=fates.param.nc, varid='fates_seed_rain', start = ipft, count = 1,
                    vals=pft[v])  
        }
-## missing from params.nc 
-#       if(var == "cuticular_cond"){
-#         gH2O_per_mol <- 18.01528
-#         ncvar_put(nc=param.nc, varid='gsmin', start = ipft, count = 1,
-#                   vals=pft[v]*gH2O_per_mol*1e-12)   ### umol H2O m-2 s-1 ->  [m s-1]
-#       }
        if(var == "DBH_at_HTMAX"){                    ## note in FATES parameter list about switching to HTMAX
          ncdf4::ncvar_put(nc=fates.param.nc, varid='fates_allom_dbh_maxheight', start = ipft, count = 1,
                    vals=pft[v])  ## [cm]
