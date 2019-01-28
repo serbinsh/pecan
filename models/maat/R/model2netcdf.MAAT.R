@@ -136,7 +136,7 @@ model2netcdf.MAAT <- function(rundir, outdir, sitelat = -999, sitelon = -999, st
       # setup netCDF time variable for year
       maat_run_start_by_year <- format(lubridate::as_datetime(sub.maat.dates, tz =timezone)[1], "%Y-%m-%d %H:%M:%S")
       tvals <- (sub.maat.doy - 1) + day.steps
-      bounds <- array(data=NA, dim=c(length(tvals),2))
+      bounds <- array(data = NA_real_, dim = c(length(tvals), 2))
       bounds[,1] <- tvals
       bounds[,2] <- bounds[,1] + dayfrac
       t <- ncdf4::ncdim_def(name = "time", units = paste0("days since ", maat_run_start_by_year),
@@ -179,7 +179,7 @@ model2netcdf.MAAT <- function(rundir, outdir, sitelat = -999, sitelon = -999, st
       t <- ncdf4::ncdim_def(name = "time", units = paste0("days since ", maat_run_start_date),
                             vals = 1, calendar = "standard", 
                             unlim = TRUE)  # standard calendar for leap years?  Also need to be sure we update cal depending on leap/no leap
-      bounds <- array(data=NA, dim=c(1,2))
+      bounds <- array(data = NA_real_, dim = c(1,2))
       bounds[,1] <- 0
       bounds[,2] <- 1
       time_interval <- ncdf4::ncdim_def(name = "hist_interval", 
